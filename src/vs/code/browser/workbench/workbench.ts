@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+//Hello!
+
 import { isStandalone } from 'vs/base/browser/browser';
 import { parse } from 'vs/base/common/marshalling';
 import { Emitter } from 'vs/base/common/event';
