@@ -336,7 +336,7 @@ export class TerminalProcessManager extends Disposable implements ITerminalProce
 			return undefined;
 		}
 
-		this._process = newProcess;
+		this._process = newProcess;//sus.
 		this._setProcessState(ProcessState.Launching);
 
 		// Add any capabilities inherent to the backend

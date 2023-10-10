@@ -738,7 +738,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 			if (e.copyAsHtml) {
 				this.copySelection(true, e.command);
 			} else {
-				this.sendText(e.command.command, e.noNewLine ? false : true);
+				this.sendText(e.command.command, e.noNewLine ? false : true);//sus.
 			}
 		});
 		this.xterm.onDidRequestFocus(() => this.focus());

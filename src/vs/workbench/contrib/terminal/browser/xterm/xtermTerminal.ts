@@ -366,6 +366,7 @@ export class XtermTerminal extends DisposableStore implements IXtermTerminal, ID
 	}
 
 	write(data: string | Uint8Array): void {
+		// console.log("xtermTerminal::write: ", data);
 		this.raw.write(data);
 	}
 

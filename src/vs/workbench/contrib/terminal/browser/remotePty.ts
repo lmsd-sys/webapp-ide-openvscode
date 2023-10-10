@@ -87,7 +87,7 @@ export class RemotePty extends Disposable implements ITerminalChildProcess {
 		});
 	}
 
-	input(data: string): void {
+	input(data: string): void {//sus.
 		if (this._inReplay) {
 			return;
 		}

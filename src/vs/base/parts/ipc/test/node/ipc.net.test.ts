@@ -16,6 +16,7 @@ import { createRandomIPCHandle, createStaticIPCHandle, NodeSocket, WebSocketNode
 import { flakySuite } from 'vs/base/test/common/testUtils';
 import { runWithFakedTimers } from 'vs/base/test/common/timeTravelScheduler';
 import { ensureNoDisposablesAreLeakedInTestSuite } from 'vs/base/test/common/utils';
+import { OfflineSock } from 'vs/server/node/remoteExtensionHostAgentServer';
 
 class MessageStream extends Disposable {
 
@@ -332,7 +333,8 @@ suite('PersistentProtocol reconnection', () => {
 
 				// begin reconnection
 				aSocket.dispose();
-				const aSocket2 = new NodeSocket(ether.a);
+				// const aSocket2 = new NodeSocket(ether.a);
+				const aSocket2 = new OfflineSock(ether.a);//change.
 				a.beginAcceptReconnection(aSocket2, null);
 
 				let timeoutListenerCalled = false;
@@ -411,8 +413,10 @@ suite('PersistentProtocol reconnection', () => {
 				aSocket.dispose();
 				bSocket.dispose();
 				const ether2 = new Ether(wireLatency);
-				const aSocket2 = new NodeSocket(ether2.a);
-				const bSocket2 = new NodeSocket(ether2.b);
+				// const aSocket2 = new NodeSocket(ether2.a);
+				// const bSocket2 = new NodeSocket(ether2.b);
+				const aSocket2 = new OfflineSock(ether2.a);//change.
+				const bSocket2 = new OfflineSock(ether2.b);//change.
 				b.beginAcceptReconnection(bSocket2, null);
 				b.endAcceptReconnection();
 				a.beginAcceptReconnection(aSocket2, null);

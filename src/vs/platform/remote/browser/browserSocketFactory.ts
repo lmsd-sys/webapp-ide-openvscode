@@ -8,7 +8,7 @@ import { RunOnceScheduler } from 'vs/base/common/async';
 import { VSBuffer } from 'vs/base/common/buffer';
 import { Emitter, Event } from 'vs/base/common/event';
 import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
-import { ISocket, SocketCloseEvent, SocketCloseEventType, SocketDiagnostics, SocketDiagnosticsEventType } from 'vs/base/parts/ipc/common/ipc.net';
+import { ISocket, SocketCloseEvent, SocketDiagnostics, SocketDiagnosticsEventType } from 'vs/base/parts/ipc/common/ipc.net';
 import { ISocketFactory } from 'vs/platform/remote/common/remoteSocketFactoryService';
 import { RemoteAuthorityResolverError, RemoteAuthorityResolverErrorCode, RemoteConnectionType, WebSocketRemoteConnection } from 'vs/platform/remote/common/remoteAuthorityResolver';
 
@@ -204,63 +204,148 @@ const defaultWebSocketFactory = new class implements IWebSocketFactory {
 	}
 };
 
-class BrowserSocket implements ISocket {
+// class BrowserSocket implements ISocket {
 
-	public readonly socket: IWebSocket;
-	public readonly debugLabel: string;
+// 	public readonly socket: IWebSocket;
+// 	public readonly debugLabel: string;
 
-	public traceSocketEvent(type: SocketDiagnosticsEventType, data?: VSBuffer | Uint8Array | ArrayBuffer | ArrayBufferView | any): void {
-		if (typeof this.socket.traceSocketEvent === 'function') {
-			this.socket.traceSocketEvent(type, data);
-		} else {
-			SocketDiagnostics.traceSocketEvent(this.socket, this.debugLabel, type, data);
-		}
+// 	public traceSocketEvent(type: SocketDiagnosticsEventType, data?: VSBuffer | Uint8Array | ArrayBuffer | ArrayBufferView | any): void {
+// 		if (typeof this.socket.traceSocketEvent === 'function') {
+// 			this.socket.traceSocketEvent(type, data);
+// 		} else {
+// 			SocketDiagnostics.traceSocketEvent(this.socket, this.debugLabel, type, data);
+// 		}
+// 	}
+
+// 	constructor(socket: IWebSocket, debugLabel: string) {
+// 		this.socket = socket;
+// 		this.debugLabel = debugLabel;
+// 	}
+
+// 	public dispose(): void {
+// 		this.socket.close();
+// 	}
+
+// 	public onData(listener: (e: VSBuffer) => void): IDisposable {//sus.
+// 		return this.socket.onData((data) => {
+// 			// let arr = new Uint8Array(data);
+// 			// console.log(`BrowserSocket.onData arr: '${arr}'\n\tstr: ${String.fromCharCode(...Array.from(arr))}`);
+// 			listener(VSBuffer.wrap(new Uint8Array(data)));
+// 		});
+// 	}
+
+// 	public onClose(listener: (e: SocketCloseEvent) => void): IDisposable {
+// 		const adapter = (e: IWebSocketCloseEvent | void) => {
+// 			if (typeof e === 'undefined') {
+// 				listener(e);
+// 			} else {
+// 				listener({
+// 					type: SocketCloseEventType.WebSocketCloseEvent,
+// 					code: e.code,
+// 					reason: e.reason,
+// 					wasClean: e.wasClean,
+// 					event: e.event
+// 				});
+// 			}
+// 		};
+// 		return this.socket.onClose(adapter);
+// 	}
+
+// 	public onEnd(listener: () => void): IDisposable {
+// 		return Disposable.None;
+// 	}
+
+// 	public write(buffer: VSBuffer): void {
+// 		// console.log("BrowserSocket.write buf: '" + buffer.toString() + "'");//sus.
+// 		this.socket.send(buffer.buffer);
+// 	}
+
+// 	public end(): void {
+// 		this.socket.close();
+// 	}
+
+// 	public drain(): Promise<void> {
+// 		return Promise.resolve();
+// 	}
+// }
+
+
+
+
+class RemoveElement<T> extends Disposable {
+	constructor(
+		private key: number,
+		private set: DisposableSet<T>
+	) {
+		super();
 	}
 
-	constructor(socket: IWebSocket, debugLabel: string) {
-		this.socket = socket;
-		this.debugLabel = debugLabel;
+	public override dispose(): void {
+		this.set.remove(this.key);
 	}
+}
 
-	public dispose(): void {
-		this.socket.close();
+class DisposableSet<T> {
+	private counter: number = 0;
+	private map = new Map<number, T>();
+
+	public insert(t: T): Disposable {
+		this.map.set(this.counter, t);
+		return new RemoveElement(this.counter++, this);
 	}
+	public remove(key: number) {
+		this.map.delete(key);
+	}
+	public forEach(callback: (t: T) => void): void {
+		this.map.forEach(callback);
+	}
+}
 
+class OfflineSock implements ISocket {
 	public onData(listener: (e: VSBuffer) => void): IDisposable {
-		return this.socket.onData((data) => listener(VSBuffer.wrap(new Uint8Array(data))));
+		return this.dataListners.insert(listener);
 	}
-
 	public onClose(listener: (e: SocketCloseEvent) => void): IDisposable {
-		const adapter = (e: IWebSocketCloseEvent | void) => {
-			if (typeof e === 'undefined') {
-				listener(e);
-			} else {
-				listener({
-					type: SocketCloseEventType.WebSocketCloseEvent,
-					code: e.code,
-					reason: e.reason,
-					wasClean: e.wasClean,
-					event: e.event
-				});
-			}
-		};
-		return this.socket.onClose(adapter);
+		return this.closeListners.insert(listener);
 	}
-
 	public onEnd(listener: () => void): IDisposable {
 		return Disposable.None;
 	}
-
 	public write(buffer: VSBuffer): void {
-		this.socket.send(buffer.buffer);
-	}
+		let s: string = buffer.buffer.toString();
+		console.log(`OfflineSock.write buf: '${s}'`);
+		/* For now the following is manually added to the compiled js file:
 
+		chrome.runtime.sendMessage("nffpfjhmgfacdooampfmoflglhmepaba",
+			{ type: "FROM_PAGE_CODE", code: s },
+			{},
+			(response) => {
+				console.log("Response from service worker:", response);
+				this.recv(response);
+			});
+		*/
+
+		//dummy invoke to `recv` for compiler:
+		this.recv("");
+	}
 	public end(): void {
-		this.socket.close();
+		//our socket is effectively always open... (for now)
+	}
+	public drain(): Promise<void> {
+		//TODO: implement
+		return Promise.resolve();
 	}
 
-	public drain(): Promise<void> {
-		return Promise.resolve();
+	public traceSocketEvent(type: SocketDiagnosticsEventType, data?: VSBuffer | Uint8Array | ArrayBuffer | ArrayBufferView | any): void {
+
+	}
+	public dispose(): void { }
+
+	private dataListners = new DisposableSet<(e: VSBuffer) => void>();
+	private closeListners = new DisposableSet<(e: SocketCloseEvent) => void>();
+
+	private recv(data: string): void {
+		this.dataListners.forEach(l => l(VSBuffer.fromString(data)));
 	}
 }
 
@@ -284,7 +369,9 @@ export class BrowserSocketFactory implements ISocketFactory<RemoteConnectionType
 			const errorListener = socket.onError(reject);
 			socket.onOpen(() => {
 				errorListener.dispose();
-				resolve(new BrowserSocket(socket, debugLabel));
+				//sus. original:
+				// resolve(new BrowserSocket(socket, debugLabel));
+				resolve(new OfflineSock());//sus.
 			});
 		});
 	}

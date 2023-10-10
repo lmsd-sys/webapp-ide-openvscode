@@ -334,7 +334,7 @@ export class DecorationAddon extends Disposable implements ITerminalAddon {
 		}
 	}
 
-	private _createContextMenu(element: HTMLElement, command: ITerminalCommand): IDisposable {
+	private _createContextMenu(element: HTMLElement, command: ITerminalCommand): IDisposable {//sus.
 		// When the xterm Decoration gets disposed of, its element gets removed from the dom
 		// along with its listeners
 		return dom.addDisposableListener(element, dom.EventType.CLICK, async () => {

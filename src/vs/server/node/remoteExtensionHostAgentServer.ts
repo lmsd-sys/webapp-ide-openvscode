@@ -14,7 +14,7 @@ import { VSBuffer } from 'vs/base/common/buffer';
 import { CharCode } from 'vs/base/common/charCode';
 import { isSigPipeError, onUnexpectedError, setUnexpectedErrorHandler } from 'vs/base/common/errors';
 import { isEqualOrParent } from 'vs/base/common/extpath';
-import { Disposable, DisposableStore } from 'vs/base/common/lifecycle';
+import { IDisposable, Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { connectionTokenQueryName, FileAccess, Schemas } from 'vs/base/common/network';
 import { dirname, join } from 'vs/base/common/path';
 import * as perf from 'vs/base/common/performance';
@@ -25,8 +25,9 @@ import { generateUuid } from 'vs/base/common/uuid';
 import { getOSReleaseInfo } from 'vs/base/node/osReleaseInfo';
 import { findFreePort } from 'vs/base/node/ports';
 import { addUNCHostToAllowlist, disableUNCAccessRestrictions } from 'vs/base/node/unc';
-import { PersistentProtocol } from 'vs/base/parts/ipc/common/ipc.net';
-import { NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
+import { PersistentProtocol, ISocket, SocketDiagnosticsEventType, SocketCloseEvent } from 'vs/base/parts/ipc/common/ipc.net';//sus.
+// import { PersistentProtocol } from 'vs/base/parts/ipc/common/ipc.net';
+import { NodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ILogService } from 'vs/platform/log/common/log';
@@ -57,6 +58,100 @@ declare module vsda {
 		validate(arg: string): 'ok' | 'error';
 	}
 }
+
+//sus.
+
+class RemoveElement<T> extends Disposable {
+	constructor(
+		private key: number,
+		private set: DisposableSet<T>
+	) {
+		super();
+	}
+
+	public override dispose(): void {
+		this.set.remove(this.key);
+	}
+}
+
+class DisposableSet<T> {
+	private counter: number = 0;
+	private map = new Map<number, T>();
+
+	public insert(t: T): Disposable {
+		this.map.set(this.counter, t);
+		return new RemoveElement(this.counter++, this);
+	}
+	public remove(key: number) {
+		this.map.delete(key);
+	}
+	public forEach(callback: (t: T) => void): void {
+		this.map.forEach(callback);
+	}
+}
+
+export interface IWrapperSocket extends ISocket {
+	getInner(): net.Socket;
+}
+
+export class OfflineSock implements IWrapperSocket {
+	constructor(
+		private sock: net.Socket
+	) {
+
+	}
+
+	public onData(listener: (e: VSBuffer) => void): Disposable {
+		return this.dataListners.insert(listener);
+	}
+	public onClose(listener: (e: SocketCloseEvent) => void): IDisposable {
+		return this.closeListners.insert(listener);
+	}
+	public onEnd(listener: () => void): IDisposable {
+		return Disposable.None;
+	}
+	public write(buffer: VSBuffer): void {
+		let s: string = buffer.buffer.toString();
+		console.log(`OfflineSock.write buf: '${s}'`);
+		/* For now the following is manually added to the compiled js file:
+
+		chrome.runtime.sendMessage("nffpfjhmgfacdooampfmoflglhmepaba",
+			{ type: "FROM_PAGE_CODE", code: s },
+			{},
+			(response) => {
+				console.log("Response from service worker:", response);
+				this.recv(response);
+			});
+		*/
+
+		//dummy invoke to `recv` for compiler:
+		this.recv("");
+	}
+	public end(): void {
+		//our socket is effectively always open... (for now)
+	}
+	public drain(): Promise<void> {
+		//TODO: implement
+		return Promise.resolve();
+	}
+
+	public traceSocketEvent(type: SocketDiagnosticsEventType, data?: VSBuffer | Uint8Array | ArrayBuffer | ArrayBufferView | any): void {
+
+	}
+	public dispose(): void { }
+
+	private dataListners = new DisposableSet<(e: VSBuffer) => void>();
+	private closeListners = new DisposableSet<(e: SocketCloseEvent) => void>();
+
+	private recv(data: string): void {
+		this.dataListners.forEach(l => l(VSBuffer.fromString(data)));
+	}
+
+	public getInner(): net.Socket {
+		return this.sock;
+	}
+}
+
 
 class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 
@@ -216,7 +311,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 		];
 
 		// See https://tools.ietf.org/html/rfc7692#page-12
-		let permessageDeflate = false;
+		// let permessageDeflate = false;
 		if (!skipWebSocketFrames && !this._environmentService.args['disable-websocket-compression'] && req.headers['sec-websocket-extensions']) {
 			const websocketExtensionOptions = Array.isArray(req.headers['sec-websocket-extensions']) ? req.headers['sec-websocket-extensions'] : [req.headers['sec-websocket-extensions']];
 			for (const websocketExtensionOption of websocketExtensionOptions) {
@@ -225,12 +320,12 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 					continue;
 				}
 				if (/\b(permessage-deflate)\b/.test(websocketExtensionOption)) {
-					permessageDeflate = true;
+					// permessageDeflate = true;
 					responseHeaders.push(`Sec-WebSocket-Extensions: permessage-deflate`);
 					break;
 				}
 				if (/\b(x-webkit-deflate-frame)\b/.test(websocketExtensionOption)) {
-					permessageDeflate = true;
+					// permessageDeflate = true;
 					responseHeaders.push(`Sec-WebSocket-Extensions: x-webkit-deflate-frame`);
 					break;
 				}
@@ -245,11 +340,18 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 		socket.setNoDelay(true);
 		// Finally!
 
+		//sus.
+		let sock: IWrapperSocket;
+		sock = new OfflineSock(socket);
+		this._handleWebSocketConnection(sock, isReconnection, reconnectionToken);
+
+		/* original:
 		if (skipWebSocketFrames) {
 			this._handleWebSocketConnection(new NodeSocket(socket, `server-connection-${reconnectionToken}`), isReconnection, reconnectionToken);
 		} else {
 			this._handleWebSocketConnection(new WebSocketNodeSocket(new NodeSocket(socket, `server-connection-${reconnectionToken}`), permessageDeflate, null, true), isReconnection, reconnectionToken);
 		}
+		*/
 	}
 
 	public handleServerError(err: Error): void {
@@ -259,13 +361,16 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 
 	// Eventually cleanup
 
-	private _getRemoteAddress(socket: NodeSocket | WebSocketNodeSocket): string {
+	private _getRemoteAddress(socket: IWrapperSocket): string {
 		let _socket: net.Socket;
+		_socket = socket.getInner();
+		/* original:
 		if (socket instanceof NodeSocket) {
 			_socket = socket.socket;
 		} else {
 			_socket = socket.socket.socket;
 		}
+		*/
 		return _socket.remoteAddress || `<unknown>`;
 	}
 
@@ -287,7 +392,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 	 * The problem is that await introduces a process.nextTick due to the implicit Promise.then
 	 * This can lead to some bytes being received and interpreted and a control message being emitted before the next listener has a chance to be registered.
 	 */
-	private _handleWebSocketConnection(socket: NodeSocket | WebSocketNodeSocket, isReconnection: boolean, reconnectionToken: string): void {
+	private _handleWebSocketConnection(socket: IWrapperSocket, isReconnection: boolean, reconnectionToken: string): void {
 		const remoteAddress = this._getRemoteAddress(socket);
 		const logPrefix = `[${remoteAddress}][${reconnectionToken.substr(0, 8)}]`;
 		const protocol = new PersistentProtocol({ socket });
@@ -413,7 +518,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 		});
 	}
 
-	private async _handleConnectionType(remoteAddress: string, _logPrefix: string, protocol: PersistentProtocol, socket: NodeSocket | WebSocketNodeSocket, isReconnection: boolean, reconnectionToken: string, msg: ConnectionTypeRequest): Promise<void> {
+	private async _handleConnectionType(remoteAddress: string, _logPrefix: string, protocol: PersistentProtocol, socket: IWrapperSocket, isReconnection: boolean, reconnectionToken: string, msg: ConnectionTypeRequest): Promise<void> {
 		const logPrefix = (
 			msg.desiredConnectionType === ConnectionType.Management
 				? `${_logPrefix}[ManagementConnection]`

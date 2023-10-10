@@ -10,7 +10,9 @@ import { FileAccess } from 'vs/base/common/network';
 import { join, delimiter } from 'vs/base/common/path';
 import { VSBuffer } from 'vs/base/common/buffer';
 import { Emitter, Event } from 'vs/base/common/event';
-import { createRandomIPCHandle, NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
+// import { createRandomIPCHandle, NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
+import { createRandomIPCHandle } from 'vs/base/parts/ipc/node/ipc.net';
+// import { ISocket } from 'vs/base/parts/ipc/common/ipc.net';
 import { getResolvedShellEnv } from 'vs/platform/shell/node/shellEnv';
 import { ILogService } from 'vs/platform/log/common/log';
 import { IRemoteExtensionHostStartParams } from 'vs/platform/remote/common/remoteAgentConnection';
@@ -22,6 +24,7 @@ import { IExtensionHostStatusService } from 'vs/server/node/extensionHostStatusS
 import { DisposableStore, toDisposable } from 'vs/base/common/lifecycle';
 import { IPCExtHostConnection, writeExtHostConnection, SocketExtHostConnection } from 'vs/workbench/services/extensions/common/extensionHostEnv';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';
 
 export async function buildUserEnvironment(startParamsEnv: { [key: string]: string | null } = {}, withUserShellEnvironment: boolean, language: string, environmentService: IServerEnvironmentService, logService: ILogService, configurationService: IConfigurationService): Promise<IProcessEnvironment> {
 	const nlsConfig = await getNLSConfiguration(language, environmentService.userDataPath);
@@ -69,7 +72,7 @@ export async function buildUserEnvironment(startParamsEnv: { [key: string]: stri
 
 class ConnectionData {
 	constructor(
-		public readonly socket: NodeSocket | WebSocketNodeSocket,
+		public readonly socket: IWrapperSocket,
 		public readonly initialDataChunk: VSBuffer
 	) { }
 
@@ -83,15 +86,21 @@ class ConnectionData {
 		let permessageDeflate: boolean;
 		let inflateBytes: VSBuffer;
 
-		if (this.socket instanceof NodeSocket) {
-			skipWebSocketFrames = true;
-			permessageDeflate = false;
-			inflateBytes = VSBuffer.alloc(0);
-		} else {
-			skipWebSocketFrames = false;
-			permessageDeflate = this.socket.permessageDeflate;
-			inflateBytes = this.socket.recordedInflateBytes;
-		}
+
+		//TODO: handle OffineSocket case.
+		skipWebSocketFrames = true;
+		permessageDeflate = false;
+		inflateBytes = VSBuffer.alloc(0);
+
+		// if (this.socket instanceof NodeSocket) {
+		// 	skipWebSocketFrames = true;
+		// 	permessageDeflate = false;
+		// 	inflateBytes = VSBuffer.alloc(0);
+		// } else {
+		// 	skipWebSocketFrames = false;
+		// 	permessageDeflate = this.socket.permessageDeflate;
+		// 	inflateBytes = this.socket.recordedInflateBytes;
+		// }
 
 		return {
 			type: 'VSCODE_EXTHOST_IPC_SOCKET',
@@ -117,7 +126,7 @@ export class ExtensionHostConnection {
 	constructor(
 		private readonly _reconnectionToken: string,
 		remoteAddress: string,
-		socket: NodeSocket | WebSocketNodeSocket,
+		socket: IWrapperSocket,
 		initialDataChunk: VSBuffer,
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
@@ -179,11 +188,12 @@ export class ExtensionHostConnection {
 		await connectionData.socketDrain();
 		const msg = connectionData.toIExtHostSocketMessage();
 		let socket: net.Socket;
-		if (connectionData.socket instanceof NodeSocket) {
-			socket = connectionData.socket.socket;
-		} else {
-			socket = connectionData.socket.socket.socket;
-		}
+		socket = connectionData.socket.getInner();
+		// if (connectionData.socket instanceof NodeSocket) {
+		// 	socket = connectionData.socket.socket;
+		// } else {
+		// 	socket = connectionData.socket.socket.socket;
+		// }
 		extensionHostProcess.send(msg, socket);
 	}
 
@@ -197,7 +207,7 @@ export class ExtensionHostConnection {
 		this._extensionHostProcess.send(msg);
 	}
 
-	public acceptReconnection(remoteAddress: string, _socket: NodeSocket | WebSocketNodeSocket, initialDataChunk: VSBuffer): void {
+	public acceptReconnection(remoteAddress: string, _socket: IWrapperSocket, initialDataChunk: VSBuffer): void {
 		this._remoteAddress = remoteAddress;
 		this._log(`The client has reconnected.`);
 		const connectionData = new ConnectionData(_socket, initialDataChunk);

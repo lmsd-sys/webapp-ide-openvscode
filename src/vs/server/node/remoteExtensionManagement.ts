@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { PersistentProtocol, ProtocolConstants, ISocket } from 'vs/base/parts/ipc/common/ipc.net';
+import { PersistentProtocol, ProtocolConstants } from 'vs/base/parts/ipc/common/ipc.net';
+import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';
 import { ILogService } from 'vs/platform/log/common/log';
 import { Emitter, Event } from 'vs/base/common/event';
 import { VSBuffer } from 'vs/base/common/buffer';
@@ -111,7 +112,7 @@ export class ManagementConnection {
 		this._onClose.fire(undefined);
 	}
 
-	public acceptReconnection(remoteAddress: string, socket: ISocket, initialDataChunk: VSBuffer): void {
+	public acceptReconnection(remoteAddress: string, socket: IWrapperSocket, initialDataChunk: VSBuffer): void {
 		this._remoteAddress = remoteAddress;
 		this._log(`The client has reconnected.`);
 		this._disconnectRunner1.cancel();

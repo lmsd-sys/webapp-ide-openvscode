@@ -57,7 +57,7 @@ export const enum RemoteTerminalChannelEvent {
 	OnDidChangeProperty = '$onDidChangeProperty',
 }
 
-export const enum RemoteTerminalChannelRequest {
+export const enum RemoteTerminalChannelRequest {//sus.
 	RestartPtyHost = '$restartPtyHost',
 	CreateProcess = '$createProcess',
 	AttachToProcess = '$attachToProcess',

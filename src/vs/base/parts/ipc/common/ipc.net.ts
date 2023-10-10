@@ -7,6 +7,7 @@ import { VSBuffer } from 'vs/base/common/buffer';
 import { Emitter, Event } from 'vs/base/common/event';
 import { Disposable, DisposableStore, IDisposable } from 'vs/base/common/lifecycle';
 import { IIPCLogger, IMessagePassingProtocol, IPCClient } from 'vs/base/parts/ipc/common/ipc';
+// import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';
 
 export const enum SocketDiagnosticsEventType {
 	Created = 'created',
