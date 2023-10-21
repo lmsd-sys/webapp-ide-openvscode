@@ -105,8 +105,10 @@ export class RemoteTerminalChannel extends Disposable implements IServerChannel<
 		super();
 	}
 
-	async call(ctx: RemoteAgentConnectionContext, command: RemoteTerminalChannelRequest, args?: any): Promise<any> {//sus.
+	async call(ctx: RemoteAgentConnectionContext, command: RemoteTerminalChannelRequest, args?: any): Promise<any> {
 		// console.log("server::remoteTerminalChannel::call command: '", command, "', args: '", args, "'");
+		//POI. (server) here modified code to print all terminal specific commands.
+		//OFFLINE_MOD
 		let res: any = "verySpecialString!!!";
 		switch (command) {
 			case RemoteTerminalChannelRequest.RestartPtyHost: { res = this._ptyHostService.restartPtyHost.apply(this._ptyHostService, args); break; }

@@ -326,7 +326,7 @@ interface PendingRequest {
 	timeoutTimer: any;
 }
 
-export class ChannelServer<TContext = string> implements IChannelServer<TContext>, IDisposable {//sus.
+export class ChannelServer<TContext = string> implements IChannelServer<TContext>, IDisposable {
 
 	private channels = new Map<string, IServerChannel<TContext>>();
 	private activeRequests = new Map<number, IDisposable>();

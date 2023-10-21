@@ -8,7 +8,7 @@ import { RunOnceScheduler } from 'vs/base/common/async';
 import { VSBuffer } from 'vs/base/common/buffer';
 import { Emitter, Event } from 'vs/base/common/event';
 import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
-import { ISocket, SocketCloseEvent, SocketDiagnostics, SocketDiagnosticsEventType } from 'vs/base/parts/ipc/common/ipc.net';
+import { ISocket, SocketCloseEvent, SocketCloseEventType, SocketDiagnostics, SocketDiagnosticsEventType } from 'vs/base/parts/ipc/common/ipc.net';
 import { ISocketFactory } from 'vs/platform/remote/common/remoteSocketFactoryService';
 import { RemoteAuthorityResolverError, RemoteAuthorityResolverErrorCode, RemoteConnectionType, WebSocketRemoteConnection } from 'vs/platform/remote/common/remoteAuthorityResolver';
 
@@ -204,74 +204,79 @@ const defaultWebSocketFactory = new class implements IWebSocketFactory {
 	}
 };
 
-// class BrowserSocket implements ISocket {
 
-// 	public readonly socket: IWebSocket;
-// 	public readonly debugLabel: string;
+//POI. (client) commented these classes to avoid 'unused' compilation errors.These are needed in original build.
+class BrowserSocket implements ISocket {
 
-// 	public traceSocketEvent(type: SocketDiagnosticsEventType, data?: VSBuffer | Uint8Array | ArrayBuffer | ArrayBufferView | any): void {
-// 		if (typeof this.socket.traceSocketEvent === 'function') {
-// 			this.socket.traceSocketEvent(type, data);
-// 		} else {
-// 			SocketDiagnostics.traceSocketEvent(this.socket, this.debugLabel, type, data);
-// 		}
-// 	}
+	public readonly socket: IWebSocket;
+	public readonly debugLabel: string;
 
-// 	constructor(socket: IWebSocket, debugLabel: string) {
-// 		this.socket = socket;
-// 		this.debugLabel = debugLabel;
-// 	}
+	public traceSocketEvent(type: SocketDiagnosticsEventType, data?: VSBuffer | Uint8Array | ArrayBuffer | ArrayBufferView | any): void {
+		if (typeof this.socket.traceSocketEvent === 'function') {
+			this.socket.traceSocketEvent(type, data);
+		} else {
+			SocketDiagnostics.traceSocketEvent(this.socket, this.debugLabel, type, data);
+		}
+	}
 
-// 	public dispose(): void {
-// 		this.socket.close();
-// 	}
+	constructor(socket: IWebSocket, debugLabel: string) {
+		this.socket = socket;
+		this.debugLabel = debugLabel;
+	}
 
-// 	public onData(listener: (e: VSBuffer) => void): IDisposable {//sus.
-// 		return this.socket.onData((data) => {
-// 			// let arr = new Uint8Array(data);
-// 			// console.log(`BrowserSocket.onData arr: '${arr}'\n\tstr: ${String.fromCharCode(...Array.from(arr))}`);
-// 			listener(VSBuffer.wrap(new Uint8Array(data)));
-// 		});
-// 	}
+	public dispose(): void {
+		this.socket.close();
+	}
 
-// 	public onClose(listener: (e: SocketCloseEvent) => void): IDisposable {
-// 		const adapter = (e: IWebSocketCloseEvent | void) => {
-// 			if (typeof e === 'undefined') {
-// 				listener(e);
-// 			} else {
-// 				listener({
-// 					type: SocketCloseEventType.WebSocketCloseEvent,
-// 					code: e.code,
-// 					reason: e.reason,
-// 					wasClean: e.wasClean,
-// 					event: e.event
-// 				});
-// 			}
-// 		};
-// 		return this.socket.onClose(adapter);
-// 	}
+	public onData(listener: (e: VSBuffer) => void): IDisposable {
+		//POI. (client) modified here to print all incoming messages.
+		return this.socket.onData((data) => {
+			//OFFLINE_MOD
+			let arr = new Uint8Array(data);
+			console.log(`BrowserSocket.onData arr: '${arr}'\n\tstr: ${String.fromCharCode(...Array.from(arr))}`);
+			listener(VSBuffer.wrap(new Uint8Array(data)));
+		});
+	}
 
-// 	public onEnd(listener: () => void): IDisposable {
-// 		return Disposable.None;
-// 	}
+	public onClose(listener: (e: SocketCloseEvent) => void): IDisposable {
+		const adapter = (e: IWebSocketCloseEvent | void) => {
+			if (typeof e === 'undefined') {
+				listener(e);
+			} else {
+				listener({
+					type: SocketCloseEventType.WebSocketCloseEvent,
+					code: e.code,
+					reason: e.reason,
+					wasClean: e.wasClean,
+					event: e.event
+				});
+			}
+		};
+		return this.socket.onClose(adapter);
+	}
 
-// 	public write(buffer: VSBuffer): void {
-// 		// console.log("BrowserSocket.write buf: '" + buffer.toString() + "'");//sus.
-// 		this.socket.send(buffer.buffer);
-// 	}
+	public onEnd(listener: () => void): IDisposable {
+		return Disposable.None;
+	}
 
-// 	public end(): void {
-// 		this.socket.close();
-// 	}
+	public write(buffer: VSBuffer): void {
+		//POI. (client) modified here to print all outgoing messages.
+		console.log("BrowserSocket.write buf: '" + buffer.toString() + "'");//OFFLINE_MOD
+		this.socket.send(buffer.buffer);
+	}
 
-// 	public drain(): Promise<void> {
-// 		return Promise.resolve();
-// 	}
-// }
+	public end(): void {
+		this.socket.close();
+	}
+
+	public drain(): Promise<void> {
+		return Promise.resolve();
+	}
+}
 
 
 
-
+//OFFLINE_MOD
 class RemoveElement<T> extends Disposable {
 	constructor(
 		private key: number,
@@ -284,7 +289,7 @@ class RemoveElement<T> extends Disposable {
 		this.set.remove(this.key);
 	}
 }
-
+//OFFLINE_MOD
 class DisposableSet<T> {
 	private counter: number = 0;
 	private map = new Map<number, T>();
@@ -300,8 +305,8 @@ class DisposableSet<T> {
 		this.map.forEach(callback);
 	}
 }
-
-class OfflineSock implements ISocket {
+//OFFLINE_MOD
+class ClientChromeSocket implements ISocket {
 	public onData(listener: (e: VSBuffer) => void): IDisposable {
 		return this.dataListners.insert(listener);
 	}
@@ -362,6 +367,7 @@ export class BrowserSocketFactory implements ISocketFactory<RemoteConnectionType
 		return true;
 	}
 
+	//POI. (client) the 'path' and 'query' variables uniquely identify the websocket. use these variables when multiplexing sockets.
 	connect({ host, port }: WebSocketRemoteConnection, path: string, query: string, debugLabel: string): Promise<ISocket> {
 		return new Promise<ISocket>((resolve, reject) => {
 			const webSocketSchema = (/^https:/.test(window.location.href) ? 'wss' : 'ws');
@@ -369,9 +375,14 @@ export class BrowserSocketFactory implements ISocketFactory<RemoteConnectionType
 			const errorListener = socket.onError(reject);
 			socket.onOpen(() => {
 				errorListener.dispose();
-				//sus. original:
-				// resolve(new BrowserSocket(socket, debugLabel));
-				resolve(new OfflineSock());//sus.
+				//POI. (client) replaced usage of old socket with our socket.
+				//OFFLINE_MOD
+				const OFFLINE_MODE = false;
+				if (OFFLINE_MODE) {
+					resolve(new ClientChromeSocket());
+				} else {
+					resolve(new BrowserSocket(socket, debugLabel));
+				}
 			});
 		});
 	}

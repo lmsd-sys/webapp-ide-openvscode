@@ -16,8 +16,14 @@ import { Platform, platform } from 'vs/base/common/platform';
 import { generateUuid } from 'vs/base/common/uuid';
 import { ClientConnectionEvent, IPCServer } from 'vs/base/parts/ipc/common/ipc';
 import { ChunkStream, Client, ISocket, Protocol, SocketCloseEvent, SocketCloseEventType, SocketDiagnostics, SocketDiagnosticsEventType } from 'vs/base/parts/ipc/common/ipc.net';
+import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';//OFFLINE_MOD
 
-export class NodeSocket implements ISocket {
+//OFFLINE_MOD
+export class NodeSocket implements ISocket, IWrapperSocket {
+	//OFFLINE_MOD
+	getInner(): Socket {
+		return this.socket;
+	}
 
 	public readonly debugLabel: string;
 	public readonly socket: Socket;
@@ -203,8 +209,12 @@ interface ISocketTracer {
 
 /**
  * See https://tools.ietf.org/html/rfc6455#section-5.2
- */
-export class WebSocketNodeSocket extends Disposable implements ISocket, ISocketTracer {
+ *///OFFLINE_MOD
+export class WebSocketNodeSocket extends Disposable implements ISocket, ISocketTracer, IWrapperSocket {
+	//OFFLINE_MOD
+	getInner(): Socket {
+		return this.socket.socket;
+	}
 
 	public readonly socket: NodeSocket;
 	private readonly _flowManager: WebSocketFlowManager;

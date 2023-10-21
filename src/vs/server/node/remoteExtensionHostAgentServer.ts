@@ -25,9 +25,8 @@ import { generateUuid } from 'vs/base/common/uuid';
 import { getOSReleaseInfo } from 'vs/base/node/osReleaseInfo';
 import { findFreePort } from 'vs/base/node/ports';
 import { addUNCHostToAllowlist, disableUNCAccessRestrictions } from 'vs/base/node/unc';
-import { PersistentProtocol, ISocket, SocketDiagnosticsEventType, SocketCloseEvent } from 'vs/base/parts/ipc/common/ipc.net';//sus.
-// import { PersistentProtocol } from 'vs/base/parts/ipc/common/ipc.net';
-import { NodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
+import { PersistentProtocol, ISocket, SocketDiagnosticsEventType, SocketCloseEvent } from 'vs/base/parts/ipc/common/ipc.net';////OFFLINE_MOD
+import { NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ILogService } from 'vs/platform/log/common/log';
@@ -59,8 +58,7 @@ declare module vsda {
 	}
 }
 
-//sus.
-
+//POI. (server) added implementation of our socket below
 class RemoveElement<T> extends Disposable {
 	constructor(
 		private key: number,
@@ -90,11 +88,13 @@ class DisposableSet<T> {
 	}
 }
 
+//OFFLINE_MOD
 export interface IWrapperSocket extends ISocket {
 	getInner(): net.Socket;
 }
 
-export class OfflineSock implements IWrapperSocket {
+//OFFLINE_MOD
+export class ServerOfflineSock implements IWrapperSocket {
 	constructor(
 		private sock: net.Socket
 	) {
@@ -147,6 +147,7 @@ export class OfflineSock implements IWrapperSocket {
 		this.dataListners.forEach(l => l(VSBuffer.fromString(data)));
 	}
 
+	//OFFLINE_MOD
 	public getInner(): net.Socket {
 		return this.sock;
 	}
@@ -311,7 +312,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 		];
 
 		// See https://tools.ietf.org/html/rfc7692#page-12
-		// let permessageDeflate = false;
+		let permessageDeflate = false;
 		if (!skipWebSocketFrames && !this._environmentService.args['disable-websocket-compression'] && req.headers['sec-websocket-extensions']) {
 			const websocketExtensionOptions = Array.isArray(req.headers['sec-websocket-extensions']) ? req.headers['sec-websocket-extensions'] : [req.headers['sec-websocket-extensions']];
 			for (const websocketExtensionOption of websocketExtensionOptions) {
@@ -320,12 +321,12 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 					continue;
 				}
 				if (/\b(permessage-deflate)\b/.test(websocketExtensionOption)) {
-					// permessageDeflate = true;
+					permessageDeflate = true;
 					responseHeaders.push(`Sec-WebSocket-Extensions: permessage-deflate`);
 					break;
 				}
 				if (/\b(x-webkit-deflate-frame)\b/.test(websocketExtensionOption)) {
-					// permessageDeflate = true;
+					permessageDeflate = true;
 					responseHeaders.push(`Sec-WebSocket-Extensions: x-webkit-deflate-frame`);
 					break;
 				}
@@ -340,18 +341,19 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 		socket.setNoDelay(true);
 		// Finally!
 
-		//sus.
-		let sock: IWrapperSocket;
-		sock = new OfflineSock(socket);
-		this._handleWebSocketConnection(sock, isReconnection, reconnectionToken);
-
-		/* original:
-		if (skipWebSocketFrames) {
-			this._handleWebSocketConnection(new NodeSocket(socket, `server-connection-${reconnectionToken}`), isReconnection, reconnectionToken);
+		//POI. (server) replaced old socket with our socket...
+		//OFFLINE_MOD
+		const OFFLINE_MODE = false;
+		if (OFFLINE_MODE) {
+			this._handleWebSocketConnection(new ServerOfflineSock(socket), isReconnection, reconnectionToken);
 		} else {
-			this._handleWebSocketConnection(new WebSocketNodeSocket(new NodeSocket(socket, `server-connection-${reconnectionToken}`), permessageDeflate, null, true), isReconnection, reconnectionToken);
+			// original impl:
+			if (skipWebSocketFrames) {
+				this._handleWebSocketConnection(new NodeSocket(socket, `server-connection-${reconnectionToken}`), isReconnection, reconnectionToken);
+			} else {
+				this._handleWebSocketConnection(new WebSocketNodeSocket(new NodeSocket(socket, `server-connection-${reconnectionToken}`), permessageDeflate, null, true), isReconnection, reconnectionToken);
+			}
 		}
-		*/
 	}
 
 	public handleServerError(err: Error): void {
@@ -361,8 +363,10 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 
 	// Eventually cleanup
 
+	//OFFLINE_MOD
 	private _getRemoteAddress(socket: IWrapperSocket): string {
 		let _socket: net.Socket;
+		//OFFLINE_MOD
 		_socket = socket.getInner();
 		/* original:
 		if (socket instanceof NodeSocket) {
@@ -391,7 +395,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 	 * NOTE: Avoid using await in this method!
 	 * The problem is that await introduces a process.nextTick due to the implicit Promise.then
 	 * This can lead to some bytes being received and interpreted and a control message being emitted before the next listener has a chance to be registered.
-	 */
+	 *///OFFLINE_MOD
 	private _handleWebSocketConnection(socket: IWrapperSocket, isReconnection: boolean, reconnectionToken: string): void {
 		const remoteAddress = this._getRemoteAddress(socket);
 		const logPrefix = `[${remoteAddress}][${reconnectionToken.substr(0, 8)}]`;
@@ -518,6 +522,7 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 		});
 	}
 
+	//OFFLINE_MOD
 	private async _handleConnectionType(remoteAddress: string, _logPrefix: string, protocol: PersistentProtocol, socket: IWrapperSocket, isReconnection: boolean, reconnectionToken: string, msg: ConnectionTypeRequest): Promise<void> {
 		const logPrefix = (
 			msg.desiredConnectionType === ConnectionType.Management

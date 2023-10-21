@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { PersistentProtocol, ProtocolConstants } from 'vs/base/parts/ipc/common/ipc.net';
-import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';
+import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';//OFFLINE_MOD
 import { ILogService } from 'vs/platform/log/common/log';
 import { Emitter, Event } from 'vs/base/common/event';
 import { VSBuffer } from 'vs/base/common/buffer';
@@ -112,6 +112,7 @@ export class ManagementConnection {
 		this._onClose.fire(undefined);
 	}
 
+	//OFFLINE_MOD
 	public acceptReconnection(remoteAddress: string, socket: IWrapperSocket, initialDataChunk: VSBuffer): void {
 		this._remoteAddress = remoteAddress;
 		this._log(`The client has reconnected.`);

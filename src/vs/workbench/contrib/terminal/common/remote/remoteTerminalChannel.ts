@@ -26,7 +26,7 @@ import { ISerializableEnvironmentDescriptionMap as ISerializableEnvironmentDescr
 import type * as performance from 'vs/base/common/performance';
 import { RemoteTerminalChannelEvent, RemoteTerminalChannelRequest } from 'vs/workbench/contrib/terminal/common/remote/terminal';
 
-export const REMOTE_TERMINAL_CHANNEL_NAME = 'remoteterminal';//sus.
+export const REMOTE_TERMINAL_CHANNEL_NAME = 'remoteterminal';//POI. when researching terminal specific commmunications, this might be a good starting point.
 
 export type ITerminalEnvironmentVariableCollections = [string, ISerializableEnvironmentVariableCollection, ISerializableEnvironmentDescriptionMap][];
 
@@ -218,7 +218,7 @@ export class RemoteTerminalChannelClient implements IPtyHostController {
 	start(id: number): Promise<ITerminalLaunchError | { injectedArgs: string[] } | undefined> {
 		return this._channel.call(RemoteTerminalChannelRequest.Start, [id]);
 	}
-	input(id: number, data: string): Promise<void> {//sus.
+	input(id: number, data: string): Promise<void> {
 		// console.debug("RemoteTerminalChannelClient::input: ", RemoteTerminalChannelRequest.Input, id, data);
 		return this._channel.call(RemoteTerminalChannelRequest.Input, [id, data]);
 	}

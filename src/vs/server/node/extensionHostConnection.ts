@@ -24,7 +24,7 @@ import { IExtensionHostStatusService } from 'vs/server/node/extensionHostStatusS
 import { DisposableStore, toDisposable } from 'vs/base/common/lifecycle';
 import { IPCExtHostConnection, writeExtHostConnection, SocketExtHostConnection } from 'vs/workbench/services/extensions/common/extensionHostEnv';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';
+import { IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';//OFFLINE_MOD
 
 export async function buildUserEnvironment(startParamsEnv: { [key: string]: string | null } = {}, withUserShellEnvironment: boolean, language: string, environmentService: IServerEnvironmentService, logService: ILogService, configurationService: IConfigurationService): Promise<IProcessEnvironment> {
 	const nlsConfig = await getNLSConfiguration(language, environmentService.userDataPath);
@@ -72,7 +72,7 @@ export async function buildUserEnvironment(startParamsEnv: { [key: string]: stri
 
 class ConnectionData {
 	constructor(
-		public readonly socket: IWrapperSocket,
+		public readonly socket: IWrapperSocket,//OFFLINE_MOD
 		public readonly initialDataChunk: VSBuffer
 	) { }
 
@@ -126,7 +126,7 @@ export class ExtensionHostConnection {
 	constructor(
 		private readonly _reconnectionToken: string,
 		remoteAddress: string,
-		socket: IWrapperSocket,
+		socket: IWrapperSocket,//OFFLINE_MOD
 		initialDataChunk: VSBuffer,
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
@@ -188,12 +188,15 @@ export class ExtensionHostConnection {
 		await connectionData.socketDrain();
 		const msg = connectionData.toIExtHostSocketMessage();
 		let socket: net.Socket;
+		//OFFLINE_MOD
 		socket = connectionData.socket.getInner();
-		// if (connectionData.socket instanceof NodeSocket) {
-		// 	socket = connectionData.socket.socket;
-		// } else {
-		// 	socket = connectionData.socket.socket.socket;
-		// }
+		/* original:
+		if (connectionData.socket instanceof NodeSocket) {
+			socket = connectionData.socket.socket;
+		} else {
+			socket = connectionData.socket.socket.socket;
+		}
+		*/
 		extensionHostProcess.send(msg, socket);
 	}
 
@@ -207,6 +210,7 @@ export class ExtensionHostConnection {
 		this._extensionHostProcess.send(msg);
 	}
 
+	//OFFLINE_MOD
 	public acceptReconnection(remoteAddress: string, _socket: IWrapperSocket, initialDataChunk: VSBuffer): void {
 		this._remoteAddress = remoteAddress;
 		this._log(`The client has reconnected.`);

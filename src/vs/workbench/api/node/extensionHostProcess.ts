@@ -25,7 +25,7 @@ import { ProcessTimeRunOnceScheduler } from 'vs/base/common/async';
 import { boolean } from 'vs/editor/common/config/editorOptions';
 import { createURITransformer } from 'vs/workbench/api/node/uriTransformer';
 import { ExtHostConnectionType, readExtHostConnection } from 'vs/workbench/services/extensions/common/extensionHostEnv';
-import { OfflineSock, IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';
+import { ServerOfflineSock, IWrapperSocket } from 'vs/server/node/remoteExtensionHostAgentServer';//OFFLINE_MOD
 
 import 'vs/workbench/api/common/extHost.common.services';
 import 'vs/workbench/api/node/extHost.node.services';
@@ -158,8 +158,9 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
 					handle.setNoDelay(true);
 
 					const initialDataChunk = VSBuffer.wrap(Buffer.from(msg.initialDataChunk, 'base64'));
+					//OFFLINE_MOD
 					let socket: IWrapperSocket;
-					socket = new OfflineSock(handle);
+					socket = new ServerOfflineSock(handle);
 					/* original:
 					if (msg.skipWebSocketFrames) {
 						socket = new NodeSocket(handle, 'extHost-socket');
