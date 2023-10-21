@@ -106,68 +106,58 @@ export class RemoteTerminalChannel extends Disposable implements IServerChannel<
 	}
 
 	async call(ctx: RemoteAgentConnectionContext, command: RemoteTerminalChannelRequest, args?: any): Promise<any> {
-		// console.log("server::remoteTerminalChannel::call command: '", command, "', args: '", args, "'");
-		//POI. (server) here modified code to print all terminal specific commands.
-		//OFFLINE_MOD
-		let res: any = "verySpecialString!!!";
+		//POI. (server) here can see all specific terminal commands in each case.
 		switch (command) {
-			case RemoteTerminalChannelRequest.RestartPtyHost: { res = this._ptyHostService.restartPtyHost.apply(this._ptyHostService, args); break; }
+			case RemoteTerminalChannelRequest.RestartPtyHost: return this._ptyHostService.restartPtyHost.apply(this._ptyHostService, args);
 
 			case RemoteTerminalChannelRequest.CreateProcess: {
 				const uriTransformer = createURITransformer(ctx.remoteAuthority);
-				res = this._createProcess(uriTransformer, <ICreateTerminalProcessArguments>args);
-				break;
+				return this._createProcess(uriTransformer, <ICreateTerminalProcessArguments>args);
 			}
-			case RemoteTerminalChannelRequest.AttachToProcess: { res = this._ptyHostService.attachToProcess.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.DetachFromProcess: { res = this._ptyHostService.detachFromProcess.apply(this._ptyHostService, args); break; }
+			case RemoteTerminalChannelRequest.AttachToProcess: return this._ptyHostService.attachToProcess.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.DetachFromProcess: return this._ptyHostService.detachFromProcess.apply(this._ptyHostService, args);
 
-			case RemoteTerminalChannelRequest.ListProcesses: { res = this._ptyHostService.listProcesses.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.GetLatency: { res = this._ptyHostService.getLatency.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.GetPerformanceMarks: { res = this._ptyHostService.getPerformanceMarks.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.OrphanQuestionReply: { res = this._ptyHostService.orphanQuestionReply.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.AcceptPtyHostResolvedVariables: { res = this._ptyHostService.acceptPtyHostResolvedVariables.apply(this._ptyHostService, args); break; }
+			case RemoteTerminalChannelRequest.ListProcesses: return this._ptyHostService.listProcesses.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.GetLatency: return this._ptyHostService.getLatency.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.GetPerformanceMarks: return this._ptyHostService.getPerformanceMarks.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.OrphanQuestionReply: return this._ptyHostService.orphanQuestionReply.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.AcceptPtyHostResolvedVariables: return this._ptyHostService.acceptPtyHostResolvedVariables.apply(this._ptyHostService, args);
 
-			case RemoteTerminalChannelRequest.Start: { res = this._ptyHostService.start.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.Input: { res = this._ptyHostService.input.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.AcknowledgeDataEvent: { res = this._ptyHostService.acknowledgeDataEvent.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.Shutdown: { res = this._ptyHostService.shutdown.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.Resize: { res = this._ptyHostService.resize.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.ClearBuffer: { res = this._ptyHostService.clearBuffer.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.GetInitialCwd: { res = this._ptyHostService.getInitialCwd.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.GetCwd: { res = this._ptyHostService.getCwd.apply(this._ptyHostService, args); break; }
+			case RemoteTerminalChannelRequest.Start: return this._ptyHostService.start.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.Input: return this._ptyHostService.input.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.AcknowledgeDataEvent: return this._ptyHostService.acknowledgeDataEvent.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.Shutdown: return this._ptyHostService.shutdown.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.Resize: return this._ptyHostService.resize.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.ClearBuffer: return this._ptyHostService.clearBuffer.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.GetInitialCwd: return this._ptyHostService.getInitialCwd.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.GetCwd: return this._ptyHostService.getCwd.apply(this._ptyHostService, args);
 
-			case RemoteTerminalChannelRequest.ProcessBinary: { res = this._ptyHostService.processBinary.apply(this._ptyHostService, args); break; }
+			case RemoteTerminalChannelRequest.ProcessBinary: return this._ptyHostService.processBinary.apply(this._ptyHostService, args);
 
-			case RemoteTerminalChannelRequest.SendCommandResult: { res = this._sendCommandResult(args[0], args[1], args[2]); break; }
-			case RemoteTerminalChannelRequest.InstallAutoReply: { res = this._ptyHostService.installAutoReply.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.UninstallAllAutoReplies: { res = this._ptyHostService.uninstallAllAutoReplies.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.GetDefaultSystemShell: { res = this._getDefaultSystemShell.apply(this, args); break; }
-			case RemoteTerminalChannelRequest.GetProfiles: { res = this._getProfiles.apply(this, args); break; }
-			case RemoteTerminalChannelRequest.GetEnvironment: { res = this._getEnvironment(); break; }
-			case RemoteTerminalChannelRequest.GetWslPath: { res = this._getWslPath(args[0], args[1]); break; }
-			case RemoteTerminalChannelRequest.GetTerminalLayoutInfo: { res = this._ptyHostService.getTerminalLayoutInfo(<IGetTerminalLayoutInfoArgs>args); break; }
-			case RemoteTerminalChannelRequest.SetTerminalLayoutInfo: { res = this._ptyHostService.setTerminalLayoutInfo(<ISetTerminalLayoutInfoArgs>args); break; }
-			case RemoteTerminalChannelRequest.SerializeTerminalState: { res = this._ptyHostService.serializeTerminalState.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.ReviveTerminalProcesses: { res = this._ptyHostService.reviveTerminalProcesses.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.GetRevivedPtyNewId: { res = this._ptyHostService.getRevivedPtyNewId.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.SetUnicodeVersion: { res = this._ptyHostService.setUnicodeVersion.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.ReduceConnectionGraceTime: { res = this._reduceConnectionGraceTime(); break; }
-			case RemoteTerminalChannelRequest.UpdateIcon: { res = this._ptyHostService.updateIcon.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.UpdateTitle: { res = this._ptyHostService.updateTitle.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.UpdateProperty: { res = this._ptyHostService.updateProperty.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.RefreshProperty: { res = this._ptyHostService.refreshProperty.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.RequestDetachInstance: { res = this._ptyHostService.requestDetachInstance(args[0], args[1]); break; }
-			case RemoteTerminalChannelRequest.AcceptDetachedInstance: { res = this._ptyHostService.acceptDetachInstanceReply(args[0], args[1]); break; }
-			case RemoteTerminalChannelRequest.FreePortKillProcess: { res = this._ptyHostService.freePortKillProcess.apply(this._ptyHostService, args); break; }
-			case RemoteTerminalChannelRequest.AcceptDetachInstanceReply: { res = this._ptyHostService.acceptDetachInstanceReply.apply(this._ptyHostService, args); break; }
+			case RemoteTerminalChannelRequest.SendCommandResult: return this._sendCommandResult(args[0], args[1], args[2]);
+			case RemoteTerminalChannelRequest.InstallAutoReply: return this._ptyHostService.installAutoReply.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.UninstallAllAutoReplies: return this._ptyHostService.uninstallAllAutoReplies.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.GetDefaultSystemShell: return this._getDefaultSystemShell.apply(this, args);
+			case RemoteTerminalChannelRequest.GetProfiles: return this._getProfiles.apply(this, args);
+			case RemoteTerminalChannelRequest.GetEnvironment: return this._getEnvironment();
+			case RemoteTerminalChannelRequest.GetWslPath: return this._getWslPath(args[0], args[1]);
+			case RemoteTerminalChannelRequest.GetTerminalLayoutInfo: return this._ptyHostService.getTerminalLayoutInfo(<IGetTerminalLayoutInfoArgs>args);
+			case RemoteTerminalChannelRequest.SetTerminalLayoutInfo: return this._ptyHostService.setTerminalLayoutInfo(<ISetTerminalLayoutInfoArgs>args);
+			case RemoteTerminalChannelRequest.SerializeTerminalState: return this._ptyHostService.serializeTerminalState.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.ReviveTerminalProcesses: return this._ptyHostService.reviveTerminalProcesses.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.GetRevivedPtyNewId: return this._ptyHostService.getRevivedPtyNewId.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.SetUnicodeVersion: return this._ptyHostService.setUnicodeVersion.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.ReduceConnectionGraceTime: return this._reduceConnectionGraceTime();
+			case RemoteTerminalChannelRequest.UpdateIcon: return this._ptyHostService.updateIcon.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.UpdateTitle: return this._ptyHostService.updateTitle.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.UpdateProperty: return this._ptyHostService.updateProperty.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.RefreshProperty: return this._ptyHostService.refreshProperty.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.RequestDetachInstance: return this._ptyHostService.requestDetachInstance(args[0], args[1]);
+			case RemoteTerminalChannelRequest.AcceptDetachedInstance: return this._ptyHostService.acceptDetachInstanceReply(args[0], args[1]);
+			case RemoteTerminalChannelRequest.FreePortKillProcess: return this._ptyHostService.freePortKillProcess.apply(this._ptyHostService, args);
+			case RemoteTerminalChannelRequest.AcceptDetachInstanceReply: return this._ptyHostService.acceptDetachInstanceReply.apply(this._ptyHostService, args);
 		}
-		if (!(res === "verySpecialString!!!")) {
-			return res.then((innerRes: any) => {
-				// console.log("server::remoteTerminalChannel::call promise returned: '", innerRes, "'");
-				return innerRes;
-			});
-		}
-
+		// @ts-expect-error Assert command is the `never` type to ensure all messages are handled
 		throw new Error(`IPC Command ${command} not found`);
 	}
 

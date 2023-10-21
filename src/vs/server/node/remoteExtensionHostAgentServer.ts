@@ -112,7 +112,7 @@ export class ServerOfflineSock implements IWrapperSocket {
 	}
 	public write(buffer: VSBuffer): void {
 		let s: string = buffer.buffer.toString();
-		console.log(`OfflineSock.write buf: '${s}'`);
+		console.log(`ServerOfflineSock.write buf: '${s}'`);
 		/* For now the following is manually added to the compiled js file:
 
 		chrome.runtime.sendMessage("nffpfjhmgfacdooampfmoflglhmepaba",

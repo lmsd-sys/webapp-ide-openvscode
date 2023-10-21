@@ -12,7 +12,7 @@ import { isCancellationError, isSigPipeError, onUnexpectedError } from 'vs/base/
 import { Event } from 'vs/base/common/event';
 import { IMessagePassingProtocol } from 'vs/base/parts/ipc/common/ipc';
 import { PersistentProtocol, ProtocolConstants, BufferedEmitter } from 'vs/base/parts/ipc/common/ipc.net';
-// import { NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
+import { NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
 import product from 'vs/platform/product/common/product';
 import { MessageType, createMessageOfType, isMessageOfType, IExtHostSocketMessage, IExtHostReadyMessage, IExtHostReduceGraceTimeMessage, ExtensionHostExitCode, IExtensionHostInitData } from 'vs/workbench/services/extensions/common/extensionHostProtocol';
 import { ExtensionHostMain, IExitFn } from 'vs/workbench/api/common/extensionHostMain';
@@ -160,15 +160,17 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
 					const initialDataChunk = VSBuffer.wrap(Buffer.from(msg.initialDataChunk, 'base64'));
 					//OFFLINE_MOD
 					let socket: IWrapperSocket;
-					socket = new ServerOfflineSock(handle);
-					/* original:
-					if (msg.skipWebSocketFrames) {
-						socket = new NodeSocket(handle, 'extHost-socket');
+					const OFFLINE_MODE = false;
+					if (OFFLINE_MODE) {
+						socket = new ServerOfflineSock(handle);
 					} else {
-						const inflateBytes = VSBuffer.wrap(Buffer.from(msg.inflateBytes, 'base64'));
-						socket = new WebSocketNodeSocket(new NodeSocket(handle, 'extHost-socket'), msg.permessageDeflate, inflateBytes, false);
+						if (msg.skipWebSocketFrames) {
+							socket = new NodeSocket(handle, 'extHost-socket');
+						} else {
+							const inflateBytes = VSBuffer.wrap(Buffer.from(msg.inflateBytes, 'base64'));
+							socket = new WebSocketNodeSocket(new NodeSocket(handle, 'extHost-socket'), msg.permessageDeflate, inflateBytes, false);
+						}
 					}
-					*/
 					if (protocol) {
 						// reconnection case
 						disconnectRunner1.cancel();
@@ -215,8 +217,13 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
 
 			const socket = net.createConnection(pipeName, () => {
 				socket.removeListener('error', reject);
-				// const protocol = new PersistentProtocol({ socket: new NodeSocket(socket, 'extHost-renderer') });
-				const protocol = new PersistentProtocol({ socket: new OfflineSock(socket) });//change.
+				const OFFLINE_MODE = false;
+				let protocol;
+				if (OFFLINE_MODE) {
+					protocol = new PersistentProtocol({ socket: new NodeSocket(socket, 'extHost-renderer') });
+				} else {
+					protocol = new PersistentProtocol({ socket: new ServerOfflineSock(socket) });
+				}
 				protocol.sendResume();
 				resolve(protocol);
 			});

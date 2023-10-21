@@ -10,9 +10,7 @@ import { FileAccess } from 'vs/base/common/network';
 import { join, delimiter } from 'vs/base/common/path';
 import { VSBuffer } from 'vs/base/common/buffer';
 import { Emitter, Event } from 'vs/base/common/event';
-// import { createRandomIPCHandle, NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
-import { createRandomIPCHandle } from 'vs/base/parts/ipc/node/ipc.net';
-// import { ISocket } from 'vs/base/parts/ipc/common/ipc.net';
+import { createRandomIPCHandle, NodeSocket, WebSocketNodeSocket } from 'vs/base/parts/ipc/node/ipc.net';
 import { getResolvedShellEnv } from 'vs/platform/shell/node/shellEnv';
 import { ILogService } from 'vs/platform/log/common/log';
 import { IRemoteExtensionHostStartParams } from 'vs/platform/remote/common/remoteAgentConnection';
@@ -86,21 +84,24 @@ class ConnectionData {
 		let permessageDeflate: boolean;
 		let inflateBytes: VSBuffer;
 
-
-		//TODO: handle OffineSocket case.
 		skipWebSocketFrames = true;
 		permessageDeflate = false;
 		inflateBytes = VSBuffer.alloc(0);
 
-		// if (this.socket instanceof NodeSocket) {
-		// 	skipWebSocketFrames = true;
-		// 	permessageDeflate = false;
-		// 	inflateBytes = VSBuffer.alloc(0);
-		// } else {
-		// 	skipWebSocketFrames = false;
-		// 	permessageDeflate = this.socket.permessageDeflate;
-		// 	inflateBytes = this.socket.recordedInflateBytes;
-		// }
+		if (this.socket instanceof NodeSocket) {
+			skipWebSocketFrames = true;
+			permessageDeflate = false;
+			inflateBytes = VSBuffer.alloc(0);
+		} else if (this.socket instanceof WebSocketNodeSocket) {
+			skipWebSocketFrames = false;
+			permessageDeflate = this.socket.permessageDeflate;
+			inflateBytes = this.socket.recordedInflateBytes;
+		} else {//OFFLINE_MOD		offline socket case:
+			//TODO: check what should actually be put here with offline socket...
+			skipWebSocketFrames = true;
+			permessageDeflate = false;
+			inflateBytes = VSBuffer.alloc(0);
+		}
 
 		return {
 			type: 'VSCODE_EXTHOST_IPC_SOCKET',
